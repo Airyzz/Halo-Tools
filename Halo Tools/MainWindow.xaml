@@ -1,12 +1,13 @@
-﻿<Window x:Class="Halo_Tools.MainWindow"
+﻿<Window x:Class="HaloTools.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Halo_Tools"
+        xmlns:local="clr-namespace:HaloTools"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        
+        <Slider x:Name="FOVSlider" HorizontalAlignment="Left" Margin="44,35,0,0" VerticalAlignment="Top" Width="709" Minimum="1" ValueChanged="FOVSlider_ValueChanged" Maximum="140"/>
+
     </Grid>
 </Window>

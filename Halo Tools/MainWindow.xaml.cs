@@ -12,17 +12,30 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Airyz;
+using static HaloTools.Addresses;
 
-namespace Halo_Tools
+namespace HaloTools
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
+
+        public AiryzMemory halo;
+
         public MainWindow()
         {
             InitializeComponent();
+
+            halo = new AiryzMemory("MCC-Win64-Shipping");
+            ReadAllAddresses(halo);
+        }
+
+        private void FOVSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            halo?.WriteFloat(fov, (float)FOVSlider.Value);
         }
     }
 }
