@@ -12,6 +12,7 @@ public:
 	static void update(int arg);
 	static void addMarker();
 	static void removeMarker(int index);
+	static void removeAll();
 	static void Initialise();
 	static DWORD WINAPI Loop(LPVOID Param);
 };
