@@ -16,9 +16,9 @@ DWORD WINAPI Initialise(LPVOID Param) {
     Log::Info("Successfully Attached to Halo!");
     ConsoleCommands::Initialise();
 
-    Halo::Initialise();
+    //Halo::Initialise();
 
-    Dolly::Initialise();
+    //Dolly::Initialise();
     Hooks::Initialise();
     return 0;
 }
