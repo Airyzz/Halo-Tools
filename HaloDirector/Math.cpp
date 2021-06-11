@@ -1,5 +1,8 @@
 #include "Math.h"
 #include <math.h>
+#include "StdInc.h"
+
+using namespace Halo;
 
 #define PI 3.141592653589
 
@@ -13,9 +16,86 @@ float Math::degrees(float radians)
     return (180.0 / PI) * radians;
 }
 
-float Math::LinearInterpolate(float y1, float y2, float alpha)
+Vector3 Math::WorldToScreen(Vector3 pos, int width, int height)
 {
-    return(y1 * (1 - alpha) + y2 * alpha);
+    float aspect_ratio = 1920.0f / 1080.0f;
+    Vector3 cam_to_obj;
+
+    float y_fov = *fov / aspect_ratio;
+
+    cam_to_obj.x = pos.x - Cam->position.x;
+    cam_to_obj.y = pos.y - Cam->position.y;
+    cam_to_obj.z = pos.z - Cam->position.z;
+
+    float dist_to_obj = sqrt(cam_to_obj.x * cam_to_obj.x + cam_to_obj.y * cam_to_obj.y + cam_to_obj.z * cam_to_obj.z);
+    Normalize(&cam_to_obj);
+
+    float obj_yaw = atan2f(cam_to_obj.y, cam_to_obj.x);
+    float camera_yaw = std::fmod(Cam->rotation.x, PI * 2.0);
+    float relative_yaw = obj_yaw - camera_yaw;
+
+    if (relative_yaw > PI) // yaw>180 degrees. convert to negative, smaller.
+        relative_yaw -= 2 * PI;
+    if (relative_yaw < -PI)
+        relative_yaw += 2 * PI;
+
+    float obj_pitch = asin(cam_to_obj.z);
+    float cam_pitch = Cam->rotation.y;
+
+    float relative_pitch = cam_pitch - obj_pitch;
+    float x_pos = -relative_yaw * 2 / radians(*fov); // radian angle measurement cancels here.
+    float y_pos = relative_pitch * 2 / radians(y_fov); // and that's the (relative pitch) / (fov / 2)
+
+    // [/Difference]
+    Vector3 onscreen;
+    onscreen.x = (x_pos + 1.0f) / 2;
+    onscreen.y = (y_pos + 1.0f) / 2;
+    onscreen.z = dist_to_obj;
+
+    //Stretch to screen coordinates
+    onscreen.x = onscreen.x * (float)width;
+    onscreen.y = onscreen.y * (float)height;
+
+
+    //Rotate around the center of the screen
+    Vector3 rotation = RotatePointAroundCenter(onscreen, -Cam->rotation.z, width, height);
+
+    return rotation;
+}
+
+Vector3 Math::RotatePointAroundCenter(Vector3 pos, float angle, float width, float height)
+{
+    Vector3 vector;
+
+    float ox = width / 2;
+    float oy = height / 2;
+    float theta = angle;
+
+    vector.x = cos(theta) * (pos.x - ox) - sin(theta) * (pos.y - oy) + ox;
+    vector.y = sin(theta) * (pos.x - ox) + cos(theta) * (pos.y - oy) + oy;
+    vector.z = pos.z;
+    return vector;
+}
+
+Vector3 Math::FixAspectRatio(Vector3 pos, int width, int height)
+{
+    float ratio = (float)height / (float)width;
+    pos.y = ((pos.y - 0.5) / ratio) + 0.5;
+    return pos;
+}
+
+float Math::round(float var)
+{
+    float value = (int)(var * 100 + .5);
+    return (float)value / 100;
+}
+
+void Math::Normalize(Vector3* vector)
+{
+    double mag = sqrt(pow(vector->x, 2) + pow(vector->y, 2) + pow(vector->z, 2));
+    vector->x = vector->x / mag;
+    vector->y = vector->y / mag;
+    vector->z = vector->z / mag;
 }
 
 float Math::CosineInterpolate(float y1, float y2, float alpha)

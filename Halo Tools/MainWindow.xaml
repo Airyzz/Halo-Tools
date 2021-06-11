@@ -5,9 +5,28 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:HaloTools"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <Slider x:Name="FOVSlider" HorizontalAlignment="Left" Margin="44,35,0,0" VerticalAlignment="Top" Width="709" Minimum="1" ValueChanged="FOVSlider_ValueChanged" Maximum="140"/>
+        Title="Halo Cinematic Tools v1.0.0" Height="250.507" Width="343.037" Style="{DynamicResource WindowStyle}">
 
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Style.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome 
+        CaptionHeight="25"
+        ResizeBorderThickness="3"
+        UseAeroCaptionButtons="True" />
+    </WindowChrome.WindowChrome>
+
+    <Grid>
+        <Button x:Name="CloseButton" Content="X" Margin="0,-20,0,0" Width="25" WindowChrome.IsHitTestVisibleInChrome="True" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Click="CloseButton_Click"/>
+        <Button x:Name="MinimiseButton" Content="_" Margin="0,-20,25,0" Width="25" WindowChrome.IsHitTestVisibleInChrome="True" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Click="MinimiseButton_Click" FontSize="16"/>
+        <Button x:Name="InjectButton" Content="Inject Mod" Margin="5,10,5,0" VerticalAlignment="Top" Height="23" Click="InjectButton_Click"/>
+        <Label Content="Controls:&#x0a;1 / 2 = Up / Down on Menu&#x0a;Q = Do Current Menu Action&#x0a;INSERT = Add New Marker&#x0a;Mouse Wheel = Roll Camera&#x0a;Mouse Wheel + LSHIFT = Zoom&#x0a;PAGE-UP = Increase Timescale&#x0a;PAGE-DOWN = Decrease Timescale" HorizontalAlignment="Left" Margin="5,90,0,-32" VerticalAlignment="Top" Height="141"/>
+        <Label Content="Load game with anticheat disabled.&#x0a;Inject after theater is loaded" HorizontalAlignment="Left" Margin="5,38,0,0" VerticalAlignment="Top"/>
     </Grid>
 </Window>

@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.30204.135
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halo Tools", "Halo Tools\Halo Tools.csproj", "{92CC6E78-6722-472C-B350-B53C171F8C07}"
+	ProjectSection(ProjectDependencies) = postProject
+		{BE24ECD7-E021-41B5-83E0-2BEC49E7663B} = {BE24ECD7-E021-41B5-83E0-2BEC49E7663B}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HaloDirector", "HaloDirector\HaloDirector.vcxproj", "{BE24ECD7-E021-41B5-83E0-2BEC49E7663B}"
 EndProject

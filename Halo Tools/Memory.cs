@@ -104,6 +104,10 @@ namespace Airyz
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, AllocationType flAllocationType, VirtualMemoryProtection flProtect);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, uint flAllocationType, uint flProtect);
+
+
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, FreeType dwFreeType);
 
@@ -116,8 +120,17 @@ namespace Airyz
         [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
 
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr GetModuleHandleA(string lpModuleName);
+
         [DllImport("USER32.DLL")]
         public static extern IntPtr PostMessage(IntPtr hWnd, uint Msg, int wParam, int lParam);
+
+        [DllImport("kernel32.dll")]
+        public static extern uint GetFullPathName(string lpFileName, uint nBufferLength, [Out] StringBuilder lpBuffer, out StringBuilder lpFilePart);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr LoadLibrary(string dllToLoad);
 
         #endregion
 
@@ -184,6 +197,22 @@ namespace Airyz
         {
             return process.MainModule;
         }
+
+        public ProcessModule GetModuleByName(string Name)
+        {
+            if (ProcessIsRunning())
+            {
+                Process proc = Process.GetProcessesByName(processName).FirstOrDefault();
+                ProcessModuleCollection procColl = process.Modules;
+                foreach (ProcessModule module in procColl)
+                {
+                    if (module.ModuleName == Name)
+                        return module;
+                }
+            }
+            return null;
+        }
+
         public void SendMessage(uint Msg, int wParam, int lParam)
         {
             PostMessage(winHandle, Msg, wParam, lParam);
@@ -225,7 +254,7 @@ namespace Airyz
                 ProcessModule procModule = null;
                 foreach (ProcessModule module in procColl)
                 {
-                    if (module.ModuleName.Length == ModuleName.Length && module.ModuleName == ModuleName)
+                    if (module.ModuleName.Length == ModuleName.Length && module.ModuleName.ToLower() == ModuleName.ToLower())
                     {
                         procModule = module;
                         break;
@@ -848,7 +877,7 @@ namespace Airyz
         #endregion
 
         #region Misc
-        public bool InjectDLL(string dllPath)
+        public bool InjectDLLA(string dllPath)
         {
             // privileges
             try
@@ -886,6 +915,69 @@ namespace Airyz
                 return false;
             }
         }
+
+        public bool InjectDLL64(string dllPath)
+        {
+            // privileges
+            try
+            {
+                Process targetProcess = Process.GetProcessesByName(processName)[0];
+
+                // geting the handle of the process - with required privileges
+                IntPtr procHandle = OpenProcess(0x1FFFFFu, false, targetProcess.Id);
+
+
+                // searching for the address of LoadLibraryA and storing it in a pointer
+                IntPtr loadLibraryAddr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryW");
+
+                Process thisProc = Process.GetCurrentProcess();
+
+                long relativeAddress = 0;
+                foreach (ProcessModule m in thisProc.Modules)
+                {
+                    //Console.WriteLine(m.ModuleName);
+                    if (m.ModuleName.ToLower() == "kernel32.dll")
+                    {
+                        relativeAddress = (long)m.BaseAddress;
+                        break;
+                    }
+                }
+
+                long offset = (long)loadLibraryAddr - relativeAddress;
+
+                IntPtr kernelBaseEx = GetBaseAddress("kernel32.dll");
+
+                loadLibraryAddr = (IntPtr)((long)kernelBaseEx + offset);
+
+                // alocating some memory on the target process - enough to store the name of the dll
+                // and storing its address in a pointer
+                byte[] data = UnicodeEncoding.Unicode.GetBytes(dllPath);
+
+                IntPtr allocMemAddress = VirtualAllocEx(procHandle, IntPtr.Zero, data.Length, 0x3000u, 0x40u);
+
+                // writing the name of the dll there
+                int bytesWritten = 0;
+                WriteProcessMemory((IntPtr)procHandle, allocMemAddress, data, data.Length, ref bytesWritten);
+
+                // creating a thread that will call LoadLibraryA with allocMemAddress as argument
+                CreateRemoteThread(procHandle, IntPtr.Zero, 0, loadLibraryAddr, allocMemAddress, 0, IntPtr.Zero);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        //void InjectDllNew(string path)
+        //{
+        //    int dwProcessId = Process.GetProcessesByName(processName)[0].Id;
+        //    IntPtr handle = OpenProcess(0x1FFFFFu, false, dwProcessId);
+        //
+        //
+        //    VirtualAllocEx()
+        //}
+
 
         public IntPtr AllocateMemory(uint dwSize)
         {
@@ -946,7 +1038,6 @@ namespace Airyz
             ChangedAddresses = new List<IntPtr> { };
         }
         #endregion
-
 
         #region Calling
 
@@ -1016,6 +1107,41 @@ namespace Airyz
             // CreateRemoteThread(pHandle, IntPtr.Zero, 0, mAlloc, IntPtr.Zero, 0, IntPtr.Zero);
 
             return mAlloc.ToInt64();
+        }
+
+        public void CallDllExport64(string ModuleName, string FunctionName, IntPtr Parameter)
+        {
+            ProcessModule module = GetModuleByName(ModuleName);
+
+            if (module != null)
+            {
+
+                IntPtr dllHandle = LoadLibrary(module.FileName);
+                //Get function address relative to this program
+                IntPtr functionAddress = GetProcAddress(dllHandle, FunctionName);
+
+                //Get the module address loaded in this process and subtract offset
+
+                Process thisProc = Process.GetCurrentProcess();
+
+                long relativeAddress = 0;
+                foreach (ProcessModule m in thisProc.Modules)
+                {
+                    //Console.WriteLine(m.ModuleName);
+                    if (m.ModuleName.ToLower() == ModuleName.ToLower())
+                    {
+                        relativeAddress = (long)m.BaseAddress;
+                        break;
+                    }
+                }
+
+                long offset = (long)functionAddress - relativeAddress;
+                IntPtr externalBase = module.BaseAddress;
+
+                IntPtr FunctionPointer = IntPtr.Add(externalBase, (int)offset);
+
+                CreateRemoteThread(pHandle, IntPtr.Zero, 0, FunctionPointer, Parameter, 0, IntPtr.Zero);
+            }
         }
 
         #endregion

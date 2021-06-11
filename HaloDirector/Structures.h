@@ -100,10 +100,29 @@ struct Vector3 {
     }
 };
 
-struct Camera {
+struct Vector2 {
+    float x;
+    float y;
+};
+
+struct Vector4 {
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
+struct Camera_Old {
 	Vector3 position;
 	Vector3 rotation;
 };
+
+struct Camera {
+    char unk[6 * 4];
+    Vector3 position;
+    Vector3 rotation;
+};
+
 
 struct CameraMarker {
 	float time;
@@ -116,10 +135,14 @@ struct CameraMarker {
 
 struct Player {
 	char unk[0x20];
-	Camera camera;
+	Camera_Old camera;
 };
 
 struct World {
 	char unk[0x90];
 	Player* player;
+};
+
+struct matrix {
+    float values[4][4];
 };

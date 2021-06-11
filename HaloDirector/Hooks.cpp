@@ -1,14 +1,8 @@
 #include "pch.h"
 #include "StdInc.h"
+#include "UI.h"
 
-#include "Renderer.h"
 
-#include "kiero.h"
-#include <d3d11.h>
-#include <D3DX11.h>
-
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "d3dx11.lib")
 using namespace Halo;
 
 #define DX11_PRESENT_INDEX 8
@@ -16,7 +10,54 @@ using namespace Halo;
 MSG msg;
 DWORD current_process = 0;
 
-Dx11Renderer	m_pDx11Renderer;
+struct Patch {
+	void* address;
+	const char* bytes[50];
+	int length;
+};
+
+int patchcount = 0;
+Patch* patches[50];
+bool Hooked = false;
+
+DWORD64 Hooks::CreateHook(void* toHook, void* hk_func, int len)
+{
+	if (len < 14) {                                            //if less than 13 bytes
+		return 0;                                         //we gtfo
+	}
+
+	//allocate 50 byte buffer
+	Hooked = true;
+
+	DWORD curProtection;
+	VirtualProtect(toHook, len, PAGE_EXECUTE_READWRITE, &curProtection);
+
+	//copy the original bytes, for restoring
+
+	patches[patchcount] = new Patch();
+
+	memcpy(patches[patchcount]->bytes, toHook, len);
+	patches[patchcount]->length = len;
+	patches[patchcount]->address = toHook;
+	patchcount++;
+
+	memset(toHook, 0x90, len);
+
+	unsigned char patch[] = {
+		0xFF, 0x25,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 //Address goes here
+	};
+	*(DWORD64*)&patch[6] = (DWORD64)hk_func; //replacing zeros with our function address
+
+	memcpy((void*)toHook, patch, sizeof(patch));
+	DWORD temp;
+	VirtualProtect(toHook, len, curProtection, &temp);
+	return((DWORD64)toHook) + len;
+}
+
+
+#pragma region MouseHook
 
 bool get_state() {
 	if (GetMessage(&msg, GetActiveWindow(), 0, 0))
@@ -25,6 +66,14 @@ bool get_state() {
 		DispatchMessage(&msg);
 	}
 	return 0;
+}
+
+bool is_foreground() {
+	HWND foreground = GetForegroundWindow();
+	DWORD foregroundID = 0;
+	GetWindowThreadProcessId(foreground, &foregroundID);
+
+	return (foregroundID == current_process);
 }
 
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -40,41 +89,61 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
 			if (foregroundID == current_process)
 			{
-				if (zDelta < 0)
+				if (Cam)
 				{
-					//Down
-
-					if (GetKeyState(VK_SHIFT) & 0x8000)
+					if (zDelta < 0)
 					{
-						if (*fov + 5.0f < 150.0f)
+						//Down
+
+						if (GetKeyState(VK_SHIFT) & 0x8000)
 						{
-							*fov += 5.0f;
+							if (*fov + 5.0f < 150.0f)
+							{
+								*fov += 5.0f;
+							}
+							else {
+								*fov = 150.0f;
+							}
 						}
 						else {
-							*fov = 150.0f;
+							Cam->rotation.z += Math::radians(5);
 						}
+
 					}
 					else {
-						(*world)->player->camera.rotation.z += Math::radians(5);
+						//Up
+						if (GetKeyState(VK_SHIFT) & 0x8000)
+						{
+							if (*fov - 5.0f > 1.0f) {
+								*fov -= 5.0f;
+							}
+							else {
+								*fov = 1.0f;
+							}
+						}
+						else {
+							Cam->rotation.z -= Math::radians(5);
+						}
 					}
-					
+				}
+			}
+		}
+		else if (wParam == WM_MBUTTONDOWN)
+		{
+			HWND foreground = GetForegroundWindow();
+			DWORD foregroundID = 0;
+			GetWindowThreadProcessId(foreground, &foregroundID);
+
+			Log::Debug("Resetting to default");
+
+			if (foregroundID == current_process)
+			{
+				if (GetKeyState(VK_SHIFT) & 0x8000)
+				{
+					*fov = 80.0;
 				}
 				else {
-					//Up
-					if (GetKeyState(VK_SHIFT) & 0x8000)
-					{
-						if (*fov - 5.0f > 1.0f) {
-							*fov -= 5.0f;
-						}
-						else {
-							*fov = 1.0f;
-						}
-					}
-					else {
-						(*world)->player->camera.rotation.z -= Math::radians(5);
-					}
-				
-
+					Cam->rotation.z = 0;
 				}
 			}
 		}
@@ -82,9 +151,63 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	return CallNextHookEx(0, nCode, wParam, lParam);
 }
 
+LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	BOOL fEatKeystroke = FALSE;
+
+	if (nCode == HC_ACTION && is_foreground())
+	{
+
+		switch (wParam)
+		{
+		case WM_KEYUP:
+		case WM_SYSKEYUP:
+			PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)lParam;
+			switch (p->vkCode)
+			{
+				case VK_F2:
+					Settings::draw_camera_path = !Settings::draw_camera_path;
+					break;
+				case 'Q':
+					Log::Info("Executing: %s", UI::GetCurrentName());
+					//Dolly::addMarker();
+					UI::Do();
+					break;
+				case '1':
+					UI::Left();
+					Log::Info("Index: %d  ->  %s", UI::GetIndex(), UI::GetCurrentName());
+					break;
+				case '2':
+					UI::Right();
+					Log::Info("Index: %d  ->  %s", UI::GetIndex(), UI::GetCurrentName());
+					break;
+				case VK_INSERT:
+					Dolly::addMarker();
+					Log::Info("Inserting Camera Marker");
+					break;
+				case VK_NEXT:
+					if (*Halo::timescale - 0.1 >= 0)
+						*Halo::timescale -= 0.1;
+					else 
+						*Halo::timescale = 0.0;
+
+					break;
+				case VK_PRIOR:
+					if (*Halo::timescale < 10.0f)
+						*Halo::timescale += 0.1;
+					break;
+			}
+			break;
+		}
+	}
+	return(fEatKeystroke ? 1 : CallNextHookEx(NULL, nCode, wParam, lParam));
+}
+
 DWORD WINAPI MouseHook(LPVOID param)
 {
 	HHOOK mousehook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
+	HHOOK hhkLowLevelKybd = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, 0, 0);
+
 	while (true)
 	{
 		get_state();
@@ -94,79 +217,45 @@ DWORD WINAPI MouseHook(LPVOID param)
 	}
 }
 
-DWORD64 Hooks::CreateHook(void* toHook, void* hk_func, int len)
-{
-	return DWORD64();
+#pragma endregion
+
+#pragma region Keyboard Hook
+
+DWORD WINAPI KeyboardHook(LPVOID param) {
+	
+
+	//while (true) {
+	//
+	//}
+
 }
 
-typedef HRESULT(__stdcall* D3D11Present) (IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
-D3D11Present o_D11Present = NULL;
+#pragma endregion
 
+#pragma region CameraHook
 
-ID3D11Device* d3d11Device;
-ID3D11DeviceContext* d3d11DevCon;
-IDXGISwapChain* swapChain;
-ID3D11Device* device;
-ID3D11DeviceContext* context;
-bool g_PresentHooked = false;
+DWORD64 CameraHook_Return;
+void __declspec(naked) Camera_Hook() {
 
-HRESULT GetDeviceAndCtxFromSwapchain(IDXGISwapChain* pSwapChain, ID3D11Device** ppDevice, ID3D11DeviceContext** ppContext)
-{
-	HRESULT ret = pSwapChain->GetDevice(__uuidof(ID3D11Device), (PVOID*)ppDevice);
+	__asm {
+		movss [rsi+0x24],xmm1
+		mulss xmm0,xmm2
+		addss xmm0,[rsi+0x28]
+		mov Cam,rsi
+		jmp[CameraHook_Return]
+	}
 
-	if (SUCCEEDED(ret))
-		(*ppDevice)->GetImmediateContext(ppContext);
-
-	return ret;
 }
 
-HRESULT __stdcall hkPresentD11(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags) {
-
-	static bool init = false;
-	if (!init)
-	{
-		g_PresentHooked = true;
-		HRESULT devCtxHr = GetDeviceAndCtxFromSwapchain(pSwapChain, &device, &context);
-		DXGI_SWAP_CHAIN_DESC sd;
-		pSwapChain->GetDesc(&sd);
-
-		d3d11Device = device;
-		d3d11DevCon = context;
-
-		Log::Info("Renderer initialized");
-		Log::Info("[+] ID3D11DrawIndexed Addr: %p", (void*)pSwapChain);
-		Log::Info("[+] ID3D11Device Addr: %p", (void*)device);
-
-
-		init = true;
-	}
-
-	if (m_pDx11Renderer.IsRenderClassInitialized() == false)
-	{
-		m_pDx11Renderer.InitializeRenderClass(device, context);
-	}
-	else {
-		m_pDx11Renderer.RenderText(10, 10, D3DCOLOR_ARGB(255, 0, 184, 245), "DirectX Draw Test");
-		Log::Info("Drawing");
-	}
-
-	return o_D11Present(pSwapChain, SyncInterval, Flags);
-}
+#pragma endregion
 
 void Hooks::Initialise()
 {
 	CreateThread(NULL, 0, &MouseHook, NULL, 0, NULL);
+	//CreateThread(NULL, 0, &KeyboardHook, NULL, 0, NULL);
 	current_process = GetCurrentProcessId();
-	
-	if (kiero::init(kiero::RenderType::D3D11) == kiero::Status::Success && kiero::bind(DX11_PRESENT_INDEX, (void**)&o_D11Present, hkPresentD11) == kiero::Status::Success)
-	{
-		Log::Info("Hooked DirectX 11");
-	}
-	else {
-		Log::Error("Unable to Hook DirectX 11");
-	}
-	
-	
+
+	CameraHook_Return = CreateHook((void*)Halo::CameraHookAddress, &Camera_Hook, 14);
 
     Log::Info("Hooks Initialised");
 } 

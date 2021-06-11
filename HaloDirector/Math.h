@@ -30,5 +30,15 @@ public:
 	static Vector3 GetForwardPosition(float Distance, Vector3 pos, Vector3 rotation);
 
 	static Vector3 LookAt(Vector3 current, Vector3 target);
+
+	static Vector3 WorldToScreen(Vector3 pos, int width, int height);
+
+	static Vector3 RotatePointAroundCenter(Vector3 pos, float angle, float width, float height);
+
+	static Vector3 FixAspectRatio(Vector3 pos, int width, int height);
+
+	static void Normalize(Vector3* vector);
+
+	static float round(float var);
 };
 

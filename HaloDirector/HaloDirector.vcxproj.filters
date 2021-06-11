@@ -39,10 +39,19 @@
     <ClCompile Include="ConsoleCommands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="kiero.cpp">
+    <ClCompile Include="Drawing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Renderer.cpp">
+    <ClCompile Include="Draw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="d3d9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -80,16 +89,19 @@
     <ClInclude Include="MinHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="kiero.h">
+    <ClInclude Include="Drawing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FW1FontWrapper.h">
+    <ClInclude Include="hDraw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="shader_fx.h">
+    <ClInclude Include="hD3D9.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Renderer.h">
+    <ClInclude Include="Settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

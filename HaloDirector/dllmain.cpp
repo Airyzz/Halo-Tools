@@ -1,25 +1,39 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
 #include "StdInc.h"
+#include "UI.h"
+#include <iomanip>
 
-HINSTANCE hModule;
 int procId;
 
 DWORD WINAPI Initialise(LPVOID Param) {
 
-    procId = GetProcessId(hModule);
+    procId = GetProcessId(Halo::hMod);
     AllocConsole();
     AttachConsole(procId);
     SetConsoleTitleA("Halo Director");
 
-
     Log::Info("Successfully Attached to Halo!");
+
+    std::time_t result = std::time(nullptr);
+
+    //1611974668 = January 30, 2020
+    //if (result < 1611974668) {
+    //    Log::Info("Current Time: %d", result);
+
     ConsoleCommands::Initialise();
-
-    //Halo::Initialise();
-
-    //Dolly::Initialise();
+    Halo::Initialise();
+    Dolly::Initialise();
+    UI::Init();
     Hooks::Initialise();
+    Drawing::Init();
+
+    //}
+    //else {
+    //    Log::Error("Beta has now expired. Please contact Airyz to request an extension, or wait until the final release");
+    //}
+
+
     return 0;
 }
 
@@ -31,7 +45,7 @@ BOOL APIENTRY DllMain( HMODULE _hModule,
 {
     if (ul_reason_for_call == DLL_PROCESS_ATTACH)
     {
-        hModule = _hModule;
+        Halo::hMod = _hModule;
         CreateThread(NULL, 0, &Initialise, NULL, 0, NULL);
     }
     
