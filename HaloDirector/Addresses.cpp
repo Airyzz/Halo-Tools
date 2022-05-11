@@ -165,7 +165,12 @@ void Halo::Initialise() {
     // Scan for 'f3 0f 59 ? ? ? ? ? f3 0f 11 ? ? f3 0f 59 ? f3 0f 58' (1803D4DB3) in halo3_v100.i64                 1 result only: ('f3 41 ? ? ? f3 0f 59 ? ? ? ? ? f3 0f 11 ? ? f3 0f 59 ? f3 0f 58')
     // Break and trace on 'movss [rsi+28],xmm0' camera coord is in xmm0
     Log::Info("---------- Scanning for Camera: ----------");
-    CameraHookAddress = Scan(L"halo3.dll", "\xf3\x41\x00\x00\x00\xf3\x0f\x59\x00\x00\x00\x00\x00\xf3\x0f\x11\x00\x00\xf3\x0f\x59\x00\xf3\x0f\x58", "xx???xxx?????xxx??xxx?xxx") + 13;
+
+    //old pattern for ~2282 build
+    //CameraHookAddress = Scan(L"halo3.dll", "\xf3\x41\x00\x00\x00\xf3\x0f\x59\x00\x00\x00\x00\x00\xf3\x0f\x11\x00\x00\xf3\x0f\x59\x00\xf3\x0f\x58", "xx???xxx?????xxx??xxx?xxx") + 13;
+
+	//good as of 2845
+    CameraHookAddress = Scan(L"halo3.dll", "\xf3\x0F\x00\x00\xf3\x0f\x11\x00\x00\xf3\x0f\x59\x00\xf3\x0f\x59\x00\xf3\x0f\x58", "xx??xxx??xxx?xxx?xxx") + 4;
     
     if (CameraHookAddress < 0x1000)
     {

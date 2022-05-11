@@ -239,6 +239,7 @@ void __declspec(naked) Camera_Hook() {
 
 	__asm {
 		movss [rsi+0x24],xmm1
+		mulss xmm0,xmm5 //added by v2845
 		mulss xmm0,xmm2
 		addss xmm0,[rsi+0x28]
 		mov Cam,rsi
@@ -255,7 +256,7 @@ void Hooks::Initialise()
 	//CreateThread(NULL, 0, &KeyboardHook, NULL, 0, NULL);
 	current_process = GetCurrentProcessId();
 
-	CameraHook_Return = CreateHook((void*)Halo::CameraHookAddress, &Camera_Hook, 14);
+	CameraHook_Return = CreateHook((void*)Halo::CameraHookAddress, &Camera_Hook, 18);
 
     Log::Info("Hooks Initialised");
 } 
